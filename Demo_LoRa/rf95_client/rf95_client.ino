@@ -12,6 +12,8 @@
 #include <RH_RF95.h>
 #include <dht.h>
 
+int led = 9;
+
 // Temperature probe
 dht DHT;
 #define DHT22_PIN 7
@@ -30,7 +32,8 @@ void setup()
   // Ensure serial flash is not interfering with radio communication on SPI bus
   //  pinMode(4, OUTPUT);
   //  digitalWrite(4, HIGH);
-
+  pinMode(led, OUTPUT);
+  digitalWrite(led, LOW);
   Serial.begin(9600);
   while (!Serial) ; // Wait for serial port to be available
   if (!rf95.init())
@@ -51,6 +54,7 @@ void setup()
 void loop()
 {
   //Read temperature and humidity
+  Serial.println("---------------> Read Temperature");
   Serial.print("DHT22, \t");
   int chk = DHT.read22(DHT22_PIN);
   switch (chk)
@@ -81,8 +85,12 @@ void loop()
   memcpy(data, &temp, sizeof(temp));
   uint8_t len_data = sizeof(data); //num bytes sent
   Serial.println("Number of bytes sent: " + (String)len_data);
-  for (int i = 0; i < len_data; i++)
-    Serial.println(data[i], HEX);
+  Serial.print("Data sent: ");
+  for (int i = 0; i < len_data; i++) {
+    Serial.print(data[i], HEX);
+    Serial.print(" ");
+  }
+  Serial.println();
 
   rf95.send(data, sizeof(data));
 
@@ -96,10 +104,13 @@ void loop()
     // Should be a reply message for us now
     if (rf95.recv(buf, &len))
     {
+      digitalWrite(led, HIGH);
       Serial.print("got reply: ");
       Serial.println((char*)buf);
-      //      Serial.print("RSSI: ");
-      //      Serial.println(rf95.lastRssi(), DEC);
+      Serial.print("RSSI: ");
+      Serial.println(rf95.lastRssi(), DEC);
+      delay(300); //Para ver led y saber si tengo respuesta del servidor
+      digitalWrite(led, LOW);
     }
     else
     {
@@ -110,7 +121,7 @@ void loop()
   {
     Serial.println("No reply, is rf95_server running?");
   }
-  delay(400);
+  delay(10000);
 }
 
 

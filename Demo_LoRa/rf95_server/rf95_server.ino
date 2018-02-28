@@ -11,6 +11,10 @@
 #include <SPI.h>
 #include <RH_RF95.h>
 
+//Yún HTTP Client
+#include <Bridge.h>
+#include <HttpClient.h>
+
 // Singleton instance of the radio driver
 RH_RF95 rf95;
 //RH_RF95 rf95(5, 2); // Rocket Scream Mini Ultra Pro with the RFM95W
@@ -31,6 +35,14 @@ void setup()
   pinMode(led, OUTPUT);
   Serial.begin(9600);
   while (!Serial) ; // Wait for serial port to be available
+
+  // Bridge takes about two seconds to start up
+  // it can be helpful to use the on-board LED
+  // as an indicator for when it has initialized
+  digitalWrite(led, LOW);
+  Bridge.begin();
+  digitalWrite(led, HIGH);
+
   if (!rf95.init())
     Serial.println("init failed");
   // Defaults after init are 434.0MHz, 13dBm, Bw = 125 kHz, Cr = 4/5, Sf = 128chips/symbol, CRC on
@@ -55,10 +67,11 @@ void loop()
     uint8_t len = sizeof(buf);
     if (rf95.recv(buf, &len))
     {
+      Serial.println("-----------------> Recibido paquete LoRa");
       digitalWrite(led, HIGH);
       RH_RF95::printBuffer("request: ", buf, len);
       Serial.println("Number of bytes recieved: " + (String)len);
-      Serial.print("got request: ");
+      Serial.print("Temperature: ");
       float temp;
       memcpy(&temp, buf, len);
       Serial.println(temp);
@@ -71,6 +84,24 @@ void loop()
       rf95.waitPacketSent();
       Serial.println("Sent a reply");
       digitalWrite(led, LOW);
+
+      if ((temp < 100) && (temp > -20)) { //Evitar mandar datos erroneos
+        // Initialize the client library to send data to server (gateway)
+        HttpClient client;
+        // Make a HTTP request:
+        String request = "http://www.aprendiendoarduino.com/servicios/datos/grabaDatos.php?arduino=2&dato=" + (String)temp;
+        Serial.println("Reenvio datos a servidor. Petición: " + request);
+        client.get(request);
+        delay(2000);
+        // if there are incoming bytes available
+        // from the server, read them and print them:
+        while (client.available()) {
+          char c = client.read();
+          Serial.print(c);
+        }
+        Serial.println();
+        Serial.flush();
+      }
     }
     else
     {
@@ -78,5 +109,3 @@ void loop()
     }
   }
 }
-
-
