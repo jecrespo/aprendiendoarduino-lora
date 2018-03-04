@@ -92,7 +92,19 @@ void loop()
         String request = "http://www.aprendiendoarduino.com/servicios/datos/grabaDatos.php?arduino=2&dato=" + (String)temp;
         Serial.println("Reenvio datos a servidor. Petición: " + request);
         client.get(request);
-        delay(2000);
+        delay(1000);
+        // if there are incoming bytes available
+        // from the server, read them and print them:
+        while (client.available()) {
+          char c = client.read();
+          Serial.print(c);
+        }
+        Serial.println();
+        Serial.flush();
+        request = "http://api.thingspeak.com/update?api_key=writeapikey&field1=" + (String)temp;
+        Serial.println("Reenvio datos a Thinkspeak. Petición: " + request);
+        client.get(request);
+        delay(1000);
         // if there are incoming bytes available
         // from the server, read them and print them:
         while (client.available()) {
